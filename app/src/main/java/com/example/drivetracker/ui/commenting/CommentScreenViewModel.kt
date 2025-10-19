@@ -34,11 +34,11 @@ class CommentScreenViewModel @Inject constructor(
     }
 
     fun updateCarWithComment(comment: Comment){
-        vehicleRepository.updateCarWithComment(car,comment)
+        vehicleRepository.updateItemWithComment(car,comment)
     }
 
     fun updateTruckWithComment(comment: Comment){
-        vehicleRepository.updateTruckWithComment(truck, comment)
+        vehicleRepository.updateItemWithComment(truck, comment)
     }
 
     fun isCar():Boolean{

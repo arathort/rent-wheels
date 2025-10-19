@@ -1,124 +1,90 @@
 package com.example.drivetracker.ui.statistics
 
-import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.drivetracker.data.VehicleRepository
 import com.example.drivetracker.data.items.CarItem
 import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.records.CarRecord
-import com.example.drivetracker.data.records.TruckRecord
+import com.example.drivetracker.data.records.CarRentalRecord
+import com.example.drivetracker.data.records.TruckRentalRecord
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class StatisticScreenViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
     private val auth: FirebaseAuth
-): ViewModel() {
-    private var carList = mutableListOf<CarItem>()
-    private var carRecordList = mutableListOf<CarRecord>()
-    private var truckList = mutableListOf<TruckItem>()
-    private var truckRecordList = mutableListOf<TruckRecord>()
+) : ViewModel() {
+
+    private val _cars = MutableStateFlow<List<CarItem>>(emptyList())
+    val cars: StateFlow<List<CarItem>> = _cars
+
+    private val _trucks = MutableStateFlow<List<TruckItem>>(emptyList())
+    val trucks: StateFlow<List<TruckItem>> = _trucks
+
+    private val _carRecords = MutableStateFlow<List<CarRentalRecord>>(emptyList())
+    val carRecords: StateFlow<List<CarRentalRecord>> = _carRecords
+
+    private val _truckRecords = MutableStateFlow<List<TruckRentalRecord>>(emptyList())
+    val truckRecords: StateFlow<List<TruckRentalRecord>> = _truckRecords
 
     init {
-        fetchCars()
-        fetchCarRecords()
-        fetchTrucks()
-        fetchTruckRecords()
+        loadCars()
+        loadTrucks()
+        loadCarRecords()
+        loadTruckRecords()
     }
 
-    private fun fetchCars() {
-        vehicleRepository.getCars { cars ->
-            cars?.let {
-                carList.clear()
-                carList.addAll(cars)
-            }
+    private fun loadCars() {
+        viewModelScope.launch {
+            val list = vehicleRepository.getVehicleItems("Cars")
+                .filterIsInstance<CarItem>()
+            _cars.value = list
         }
     }
 
-    private fun fetchCarRecords() {
-        vehicleRepository.getCarRecord { cars ->
-            cars?.let {
-                carRecordList.clear()
-                carRecordList.addAll(cars)
-            }
+    private fun loadTrucks() {
+        viewModelScope.launch {
+            val list = vehicleRepository.getVehicleItems("Trucks")
+                .filterIsInstance<TruckItem>()
+            _trucks.value = list
         }
     }
 
-    private fun fetchTrucks() {
-        vehicleRepository.getTrucks { trucks ->
-            trucks?.let {
-                truckList.clear()
-                truckList.addAll(trucks)
-            }
+    private fun loadCarRecords() {
+        viewModelScope.launch {
+            val records = vehicleRepository.getRentalRecords("Cars")
+                .filterIsInstance<CarRentalRecord>()
+            _carRecords.value = records
         }
     }
 
-    private fun fetchTruckRecords() {
-        vehicleRepository.getTruckRecord { trucks ->
-            trucks?.let {
-                truckRecordList.clear()
-                truckRecordList.addAll(trucks)
-            }
+    private fun loadTruckRecords() {
+        viewModelScope.launch {
+            val records = vehicleRepository.getRentalRecords("Trucks")
+                .filterIsInstance<TruckRentalRecord>()
+            _truckRecords.value = records
         }
     }
 
-    fun getCars():List<CarItem>{
-        fetchCars()
-        return carList
-    }
+    fun getNumberOfRent(carItem: CarItem): Int =
+        _carRecords.value.count { it.item.car == carItem.car }
 
-    fun getTrucks():List<TruckItem>{
-        fetchTrucks()
-        return truckList
-    }
+    fun getNumberOfRent(truckItem: TruckItem): Int =
+        _truckRecords.value.count { it.item.truck == truckItem.truck }
 
-    fun getNumberOfRent(carItem: CarItem): Int{
-        fetchCarRecords()
-        var number=0
-        for(item in carRecordList){
-            if(carItem.car==item.carItem.car){
-                number++
-            }
-        }
-        return number
-    }
+    fun getCarOwner(carItem: CarItem): String =
+        _carRecords.value.firstOrNull { it.item.car == carItem.car && it.isActive }?.renter?.email.orEmpty()
 
-    fun getNumberOfRent(truckItem: TruckItem): Int{
-        fetchTruckRecords()
-        var number=0
-        for(item in truckRecordList){
-            if(truckItem.truck.brand==item.truckItem.truck.brand){
-                number++
-            }
-        }
-        return number
-    }
+    fun getTruckOwner(truckItem: TruckItem): String =
+        _truckRecords.value.firstOrNull { it.item.truck == truckItem.truck && it.isActive }?.renter?.email.orEmpty()
 
-    fun isAdmin():Boolean{
-        return auth.currentUser?.email == "1@gmail.com"
-    }
+    fun isAdmin(): Boolean =
+        auth.currentUser?.email == "1@gmail.com"
 
-    fun exit(){
+    fun exit() {
         auth.signOut()
     }
-
-    fun getCarOwner(carItem: CarItem):String{
-        for(item in carRecordList){
-            if(item.carItem.car==carItem.car&&item.isActive){
-                return item.ownerEmail
-            }
-        }
-        return ""
-    }
-
-    fun getTruckOwner(truckItem: TruckItem):String{
-        for(item in truckRecordList){
-            if(item.truckItem.truck==truckItem.truck&&item.isActive){
-                return item.ownerEmail
-            }
-        }
-        return ""
-    }
-
-
 }

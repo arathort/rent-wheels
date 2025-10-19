@@ -1,90 +1,93 @@
 package com.example.drivetracker.ui.order
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.drivetracker.data.VehicleRepository
 import com.example.drivetracker.data.items.CarItem
 import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.VehicleRepository
+import com.example.drivetracker.data.items.VehicleItem
+import com.example.drivetracker.domain.user.User
 import com.example.drivetracker.model.OrderVehicleUiState
+import com.example.drivetracker.ui.RentWheelsScreen
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class OrderVehicleViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
     private val auth: FirebaseAuth
-):ViewModel() {
+) : ViewModel() {
     private val _uiState = MutableStateFlow(OrderVehicleUiState())
-    val uiState:StateFlow<OrderVehicleUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<OrderVehicleUiState> = _uiState.asStateFlow()
 
-    private var carList = mutableListOf<CarItem>()
-    private var truckList = mutableListOf<TruckItem>()
+    private var currentUser: User? = null
 
     init {
-        fetchCars()
-        fetchTrucks()
-    }
-
-    private fun fetchCars() {
-        vehicleRepository.getCars { cars ->
-            cars?.let {
-                carList.clear()
-                carList.addAll(cars)
+        viewModelScope.launch {
+            val email = auth.currentUser?.email ?: ""
+            currentUser = vehicleRepository.getUserByEmail(email) ?: User(
+                email = email,
+                role = if (email == "1@gmail.com") "admin" else "renter"
+            )
+            if (currentUser?.id.isNullOrEmpty()) {
+                val id = vehicleRepository.addUser(currentUser!!)
+                currentUser?.id = id.toString()
             }
+            fetchVehicles()
         }
     }
 
-    private fun fetchTrucks() {
-        vehicleRepository.getTrucks { trucks ->
-            trucks?.let {
-                truckList.clear()
-                truckList.addAll(trucks)
-            }
+    fun selectVehicle(vehicle: VehicleItem) {
+        vehicleRepository.setSelectedVehicle(vehicle)
+    }
+
+    private suspend fun fetchVehicles() {
+        val cars = vehicleRepository.getVehicleItems("Cars")
+        val trucks = vehicleRepository.getVehicleItems("Trucks")
+        _uiState.update {
+            it.copy(
+                cars = cars as List<CarItem>,
+                trucks = trucks as List<TruckItem>
+            )
         }
     }
 
+    fun changeVehicleType(isTruck: Boolean) {
+        _uiState.update { it.copy(isTruck = isTruck) }
+    }
 
-
-    fun changeVehicle(index: Int){
-        _uiState.update { currentState ->
-            currentState.copy(isTruck = index!=0)
+    fun getEnableVehicles(): List<VehicleItem> {
+        return _uiState.value.let { state ->
+            val vehicles = if (state.isTruck) state.trucks else state.cars
+            vehicles.filter { !it.isRented() }
         }
     }
 
-    fun getEnableCars(): MutableList<CarItem> {
-        fetchCars()
-        val enableCarList = mutableListOf<CarItem>()
-        for (item in carList){
-            if(!item.isRented()){
-                enableCarList.add(item)
-            }
+    fun navigateToAddScreen(vehicleType: String) {
+        _uiState.update {
+            it.copy(
+                navigateTo = when (vehicleType) {
+                    "Car" -> RentWheelsScreen.AddCar.name
+                    "Truck" -> RentWheelsScreen.AddTruck.name
+                    else -> null
+                }
+            )
         }
-        return enableCarList
     }
 
-    fun getEnableTrucks(): MutableList<TruckItem>{
-        fetchTrucks()
-        val enableTruckList = mutableListOf<TruckItem>()
-        for (item in truckList){
-            if(!item.isRented()){
-                enableTruckList.add(item)
-            }
-        }
-        return enableTruckList
+    fun onNavigateDone() {
+        _uiState.update { it.copy(navigateTo = null) }
     }
 
-    fun addCar(car: CarItem){
-        vehicleRepository.addCar(car)
+    fun isAdmin(): Boolean {
+        return currentUser?.role == "admin"
     }
 
-    fun addTruck(truck: TruckItem){
-        vehicleRepository.addTruck(truck)
+    fun addVehicleItem(vehicleItem: VehicleItem) {
+        vehicleRepository.addVehicleItem(vehicleItem)
     }
-
-    fun isAdmin():Boolean{
-        return auth.currentUser?.email=="1@gmail.com"
-    }
-
 }

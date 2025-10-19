@@ -27,12 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.drivetracker.data.items.TruckItem
 import com.example.drivetracker.data.entity.Truck
+import com.example.drivetracker.data.items.TruckItem
 import com.example.drivetracker.ui.RentWheelsScreen
 import com.example.drivetracker.ui.order.OrderVehicleViewModel
 import java.time.LocalDate
@@ -42,17 +40,18 @@ import java.time.format.DateTimeFormatter
 fun AddTruckScreen(
     viewModel: OrderVehicleViewModel,
     navHostController: NavHostController,
-){
+) {
     val context = LocalContext.current
     Surface(modifier = Modifier.fillMaxSize()) {
-        Row{
-            Button(onClick = { navHostController.navigate(route = RentWheelsScreen.OrderVehicles.name)}) {
+        Row {
+            Button(onClick = { navHostController.navigate(route = RentWheelsScreen.OrderVehicles.name) }) {
                 Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Arrow back")
             }
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center) {
+            verticalArrangement = Arrangement.Center
+        ) {
             var brandText by remember { mutableStateOf(TextFieldValue()) }
             Text(
                 text = "Додавання вантажівки",
@@ -66,7 +65,7 @@ fun AddTruckScreen(
                 onValueChange = {
                     brandText = it
                 },
-                label={
+                label = {
                     Text(text = "Марка")
                 },
                 maxLines = 1
@@ -77,7 +76,7 @@ fun AddTruckScreen(
                 onValueChange = {
                     modelText = it
                 },
-                label={
+                label = {
                     Text(text = "Модель")
                 },
                 maxLines = 1
@@ -87,11 +86,11 @@ fun AddTruckScreen(
             OutlinedTextField(
                 value = regNumberText,
                 onValueChange = {
-                    if(it.text.length<=8) {
+                    if (it.text.length <= 8) {
                         regNumberText = it
                     }
                 },
-                label={
+                label = {
                     Text(text = "Реєстраційний номер")
                 },
                 maxLines = 1
@@ -103,7 +102,7 @@ fun AddTruckScreen(
                 onValueChange = {
                     yearText = it
                 },
-                label={
+                label = {
                     Text(text = "Рік випуску")
                 },
                 maxLines = 1,
@@ -116,7 +115,7 @@ fun AddTruckScreen(
                 onValueChange = {
                     cargoCapacity = it
                 },
-                label={
+                label = {
                     Text(text = "Вантажність (кг)")
                 },
                 maxLines = 1,
@@ -129,7 +128,7 @@ fun AddTruckScreen(
                 onValueChange = {
                     priceText = it
                 },
-                label={
+                label = {
                     Text(text = "Ціна за день")
                 },
                 maxLines = 1,
@@ -141,7 +140,7 @@ fun AddTruckScreen(
                 onValueChange = {
                     pledgeText = it
                 },
-                label={
+                label = {
                     Text(text = "Застава")
                 },
                 maxLines = 1,
@@ -149,17 +148,23 @@ fun AddTruckScreen(
             )
 
             Button(onClick = {
-                if(yearText.text.toInt()>LocalDate.now().year||yearText.text.toInt()<1885){
-                    Toast.makeText(context, "Рік випуску не відповідає дійсності!", Toast.LENGTH_SHORT).show()
+                if (yearText.text.toInt() > LocalDate.now().year || yearText.text.toInt() < 1885) {
+                    Toast.makeText(
+                        context,
+                        "Рік випуску не відповідає дійсності!",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
 
-                if(cargoCapacity.text.toInt()<=0||priceText.text.toDouble()<=0){
-                    Toast.makeText(context, "Значення мають бути більше 0!", Toast.LENGTH_SHORT).show()
+                if (cargoCapacity.text.toInt() <= 0 || priceText.text.toDouble() <= 0) {
+                    Toast.makeText(context, "Значення мають бути більше 0!", Toast.LENGTH_SHORT)
+                        .show()
                     return@Button
                 }
-                if(cargoCapacity.text.toDouble()>22000){
-                    Toast.makeText(context, "Занадто велика вантажність!", Toast.LENGTH_SHORT).show()
+                if (cargoCapacity.text.toDouble() > 22000) {
+                    Toast.makeText(context, "Занадто велика вантажність!", Toast.LENGTH_SHORT)
+                        .show()
                     return@Button
                 }
                 if (brandText.text.isNotEmpty() && modelText.text.isNotEmpty() && yearText.text.isNotEmpty() && cargoCapacity.text.isNotEmpty()) {
@@ -171,12 +176,13 @@ fun AddTruckScreen(
                         registrationNumber = regNumberText.text
                     )
                     val truckItem = TruckItem(
-                        truck =truck,
-                        uploadDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                        truck = truck,
+                        uploadDate = LocalDate.now()
+                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                         price = priceText.text.toDouble(),
                         pledge = pledgeText.text.toDouble()
                     )
-                    viewModel.addTruck(truckItem)
+                    viewModel.addVehicleItem(truckItem)
                     navHostController.navigate(RentWheelsScreen.OrderVehicles.name)
                 }
             }

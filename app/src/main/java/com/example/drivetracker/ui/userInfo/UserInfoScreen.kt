@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,214 +21,200 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.drivetracker.R
 import com.example.drivetracker.data.items.CarItem
 import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.records.CarRecord
-import com.example.drivetracker.data.records.TruckRecord
+import com.example.drivetracker.data.records.CarRentalRecord
+import com.example.drivetracker.data.records.TruckRentalRecord
 import com.example.drivetracker.ui.RentWheelsScreen
 import com.example.drivetracker.ui.order.CustomBottomAppBar
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun UserInfoScreen(
     navHostController: NavHostController,
     viewModel: UserInfoViewModel,
-    onCarClick:(CarItem)->Unit,
-    onTruckClick:(TruckItem)->Unit
-){
-    Surface(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    onCarClick: (CarItem) -> Unit,
+    onTruckClick: (TruckItem) -> Unit
+) {
+    val carList by viewModel.carRecords.collectAsState()
+    val truckList by viewModel.truckRecords.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadCarRecords()
+        viewModel.loadTruckRecords()
+    }
+
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "Інформація про користувача",
-                fontSize = MaterialTheme.typography.displaySmall.fontSize,
+                fontSize = MaterialTheme.typography.titleLarge.fontSize,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(20.dp)
             )
+
             Card {
-                Row {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(10.dp)
+                ) {
                     Image(
                         painter = painterResource(id = R.drawable.user_icon),
                         contentDescription = "User image",
                         modifier = Modifier
-                            .size(125.dp)
+                            .size(80.dp)
                             .clip(CircleShape)
                     )
+                    Spacer(Modifier.width(16.dp))
                     Text(
                         text = viewModel.getUserEmail(),
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(20.dp)
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
                     )
                 }
             }
-            
+
+            Spacer(Modifier.height(12.dp))
+
             Button(
-                onClick = { 
-                    viewModel.exit() 
+                onClick = {
+                    viewModel.exit()
                     navHostController.navigate(RentWheelsScreen.LogIn.name)
-                }) {
+                }
+            ) {
                 Text(text = "Вийти")
             }
-            val carList = viewModel.getCarRecords()
-            val truckList = viewModel.getTruckRecords()
+
+            Spacer(Modifier.height(16.dp))
 
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 300.dp),
                 modifier = Modifier
-                    .height(375.dp)
+                    .weight(1f)
                     .padding(10.dp)
             ) {
-                items(carList){
+                items(carList) { record ->
                     DisplayCarRecord(
-                        carRecord = it,
+                        carRecord = record,
                         onFinish = {
-                            viewModel.updateCarRecord(it)
-                            viewModel.updateCar(it.carItem)
-                            onCarClick.invoke(it.carItem)
+                            viewModel.updateCarRecord(record)
+                            viewModel.updateCar(record.item)
+                            onCarClick(record.item)
                         },
-                        viewModel.isCarDateEnd(it)
+                        isEnd = viewModel.isDateExpired(record.endRentDate)
                     )
                 }
-                items(truckList){
-                    DisplayTruckRecords(
-                        truckRecord = it,
+                items(truckList) { record ->
+                    DisplayTruckRecord(
+                        truckRecord = record,
                         onFinish = {
-                            viewModel.updateTruckRecord(it)
-                            viewModel.updateTruck(it.truckItem)
-                            onTruckClick.invoke(it.truckItem)
+                            viewModel.updateTruckRecord(record)
+                            viewModel.updateTruck(record.item)
+                            onTruckClick(record.item)
                         },
-                        viewModel.isTruckDateEnd(it)
+                        isEnd = viewModel.isDateExpired(record.endRentDate)
                     )
                 }
             }
-        }
-        CustomBottomAppBar(navHostController, viewModel.isAdmin())
 
+            CustomBottomAppBar(
+                navHostController = navHostController,
+                isAdmin = viewModel.isAdmin(),
+            )
+        }
     }
 }
 
-@Preview
 @Composable
-fun UserInfoScreenPreview(){
-    //DisplayCarRecord(carRecord = CarRecord())
-}
-
-@Composable
-fun DisplayCarRecord(carRecord: CarRecord, onFinish:()->Unit, isEnd:Boolean){
+fun DisplayCarRecord(
+    carRecord: CarRentalRecord,
+    onFinish: () -> Unit,
+    isEnd: Boolean
+) {
     Card(
         modifier = Modifier
-            .padding(15.dp)
+            .padding(12.dp)
             .fillMaxWidth()
     ) {
-        Column {
-            Row(Modifier.fillMaxWidth()){
-                Row(
-                    Modifier
-                        .padding(20.dp)
-                ) {
-                    Text(
-                        text = carRecord.carItem.car.brand+" "+carRecord.carItem.car.model,
-                        fontSize = MaterialTheme.typography.headlineMedium.fontSize,
-                        modifier =  Modifier.width(165.dp),
-                        lineHeight = 35.sp
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    //if(getCurrentDate()==carRecord.endRentDate)
-                    Column {
-                        Text(
-                            text = "Видача: ${carRecord.startRentDate}"
-                        )
-                        Text(text = "Заверш. ${carRecord.endRentDate}")
-                    }
-
+        Column(Modifier.padding(12.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${carRecord.item.car.brand} ${carRecord.item.car.model}",
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
+                    lineHeight = 28.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = "Видача: ${carRecord.startRentDate}")
+                    Text(text = "Заверш.: ${carRecord.endRentDate}")
                 }
             }
-            Button(onClick ={
-
-                onFinish.invoke()
-            } ) {
-                Text(text = "Завершити")
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onFinish, modifier = Modifier.fillMaxWidth()) {
+                Text("Завершити")
             }
-
-            if(isEnd){
-                Text(text = "Термін оренди закінчився!!!!")
+            if (isEnd) {
+                Text(
+                    text = "Термін оренди закінчився!",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
             }
         }
-        
-
     }
 }
 
 @Composable
-fun DisplayTruckRecords(truckRecord: TruckRecord,onFinish:()->Unit, isEnd: Boolean){
+fun DisplayTruckRecord(
+    truckRecord: TruckRentalRecord,
+    onFinish: () -> Unit,
+    isEnd: Boolean
+) {
     Card(
         modifier = Modifier
-            .padding(15.dp)
-            .fillMaxWidth(),
+            .padding(12.dp)
+            .fillMaxWidth()
     ) {
-        Column {
-            Row(Modifier.fillMaxWidth()){
-                Row(
-                    Modifier
-                        .padding(20.dp)
-                ) {
-                    Text(
-                        text = truckRecord.truckItem.truck.brand+" "+truckRecord.truckItem.truck.model,
-                        fontSize = MaterialTheme.typography.headlineMedium.fontSize,
-                        modifier =  Modifier.width(165.dp),
-                        lineHeight = 35.sp
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(text = "Видача: ${truckRecord.startRentDate}")
-                        Text(text = "Заверш. ${truckRecord.endRentDate}")
-                    }
-
+        Column(Modifier.padding(12.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${truckRecord.item.truck.brand} ${truckRecord.item.truck.model}",
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
+                    lineHeight = 28.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = "Видача: ${truckRecord.startRentDate}")
+                    Text(text = "Заверш.: ${truckRecord.endRentDate}")
                 }
             }
-            Button(onClick =onFinish) {
-                Text(text = "Завершити")
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onFinish, modifier = Modifier.fillMaxWidth()) {
+                Text("Завершити")
             }
-
-            if(isEnd){
-                Text(text = "Термін оренди закінчився!!!!")
+            if (isEnd) {
+                Text(
+                    text = "Термін оренди закінчився!",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
             }
         }
-
-
     }
-}
-
-
-fun getCurrentDate():String{
-    return LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 }

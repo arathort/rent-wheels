@@ -1,330 +1,178 @@
 package com.example.drivetracker.data
 
-import android.util.Log
 import com.example.drivetracker.data.comments.Comment
 import com.example.drivetracker.data.items.CarItem
 import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.records.CarRecord
-import com.example.drivetracker.data.records.TruckRecord
+import com.example.drivetracker.data.items.VehicleItem
+import com.example.drivetracker.data.records.CarRentalRecord
+import com.example.drivetracker.data.records.TruckRentalRecord
+import com.example.drivetracker.domain.payment.Payment
+import com.example.drivetracker.domain.rent.RentalRecord
+import com.example.drivetracker.domain.user.User
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class VehicleRepository(
-    private val firebase: FirebaseDatabase = FirebaseDatabase
-    .getInstance("https://drivetracker-ecf96-default-rtdb.europe-west1.firebasedatabase.app/")
+    private val firebase: FirebaseDatabase = FirebaseDatabase.getInstance("https://drivetracker-ecf96-default-rtdb.europe-west1.firebasedatabase.app/")
 ) {
-    private var carsList = mutableListOf<CarItem>()
-    fun getCars(callback: (List<CarItem>?) -> Unit) {
-        val ref = firebase.getReference("Cars")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                carsList.clear()
-                for (carSnapshot in snapshot.children) {
-                    val car = carSnapshot.getValue(CarItem::class.java)
-                    car?.let { carsList.add(it) }
-                }
-                callback(carsList)
-            }
+    private var selectedVehicle: VehicleItem? = null
 
-            override fun onCancelled(error: DatabaseError) {
-                callback(null)
-            }
-        })
+    fun setSelectedVehicle(vehicle: VehicleItem) {
+        selectedVehicle = vehicle
     }
 
-    fun addCar(car: CarItem){
-        val db = firebase.getReference("Cars")
-        val carId = db.push().key!!
-        db.child(carId).setValue(car)
+    fun getSelectedVehicle(): VehicleItem? = selectedVehicle
+
+    private fun getItemRef(type: String): DatabaseReference =
+        firebase.getReference("Vehicles/$type")
+
+    suspend fun getVehicleById(id: String): VehicleItem? {
+        val cars = listenForValue(getItemRef("Cars"), CarItem::class.java)
+        val trucks = listenForValue(getItemRef("Trucks"), TruckItem::class.java)
+        return (cars + trucks).firstOrNull { it.id == id }
     }
 
-    fun getTrucks(callback: (List<TruckItem>?) -> Unit) {
-        val ref = firebase.getReference("Trucks")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val trucksList = mutableListOf<TruckItem>()
-                for (carSnapshot in snapshot.children) {
-                    val car = carSnapshot.getValue(TruckItem::class.java)
-                    car?.let { trucksList.add(it) }
-                }
-                callback(trucksList)
-            }
 
-            override fun onCancelled(error: DatabaseError) {
-                callback(null)
-            }
-        })
-    }
+    private fun getRecordRef(type: String): DatabaseReference =
+        firebase.getReference("RentalRecords/$type")
 
-    fun addTruck(truck: TruckItem){
-        val db = firebase.getReference("Trucks")
-        val truckId = db.push().key!!
-        db.child(truckId).setValue(truck)
-    }
+    private val usersRef: DatabaseReference = firebase.getReference("Users")
+    private val paymentsRef: DatabaseReference = firebase.getReference("Payments")
 
-    fun deleteCar(car: CarItem){
-        val ref = firebase.getReference("Cars")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (carSnapshot in snapshot.children) {
-                    val temp = carSnapshot.getValue(CarItem::class.java)
-                    if(temp?.car == car.car){
-                        val carKey = carSnapshot.key
-                        Log.v("Debug", carKey.toString())
-                        if (carKey != null) {
-                            ref.child(carKey).removeValue()
-                        }
-                        break
+    private suspend fun <T> listenForValue(ref: DatabaseReference, clazz: Class<T>): List<T> =
+        suspendCoroutine { cont ->
+            ref.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val list = mutableListOf<T>()
+                    for (child in snapshot.children) {
+                        child.getValue(clazz)?.let { list.add(it) }
                     }
+                    cont.resume(list)
                 }
-            }
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("Debug", "Cancel deleting")
-            }
-        })
-    }
-
-    fun deleteTruck(truck: TruckItem){
-        val ref = firebase.getReference("Trucks")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (dataSnapshot in snapshot.children) {
-                    val temp = dataSnapshot.getValue(TruckItem::class.java)
-                    if(temp?.uploadDate == truck.uploadDate){
-                        val key = dataSnapshot.key
-                        Log.v("Debug", key.toString())
-                        if (key != null) {
-                            ref.child(key).removeValue()
-                                .addOnSuccessListener {
-                                    println("Об'єкт успішно видалено з бази даних.")
-                                }
-                                .addOnFailureListener { error ->
-                                    println("Помилка при видаленні об'єкта: $error")
-                                }
-                        }
-                        break
-                    }
+                override fun onCancelled(error: DatabaseError) {
+                    cont.resumeWithException(RuntimeException("DB error: ${error.message}"))
                 }
-            }
+            })
+        }
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("Debug", "Cancel deleting")
-            }
-        })
+    suspend fun getVehicleItems(type: String): List<VehicleItem> {
+        return when (type) {
+            "Cars" -> listenForValue(getItemRef(type), CarItem::class.java)
+            "Trucks" -> listenForValue(getItemRef(type), TruckItem::class.java)
+            else -> throw IllegalArgumentException("Unsupported type: $type")
+        }
     }
 
-    fun addCarRecord(carRecord: CarRecord){
-        val db = firebase.getReference("CarRecords")
-        val carId = db.push().key!!
-        db.child(carId).setValue(carRecord)
+    fun addVehicleItem(item: VehicleItem): String {
+        val ref = when (item) {
+            is CarItem -> getItemRef("Cars")
+            is TruckItem -> getItemRef("Trucks")
+            else -> throw IllegalArgumentException("Unsupported item type")
+        }
+        val id = ref.push().key ?: throw RuntimeException("Failed to generate ID")
+        item.id = id
+        ref.child(id).setValue(item)
+        return id
     }
 
-    fun addTruckRecord(truckRecord: TruckRecord){
-        val db = firebase.getReference("TruckRecords")
-        val truckId = db.push().key!!
-        db.child(truckId).setValue(truckRecord)
+    fun updateVehicleItem(item: VehicleItem) {
+        if (item.id.isEmpty()) throw IllegalStateException("Item has no ID")
+        val ref = when (item) {
+            is CarItem -> getItemRef("Cars").child(item.id)
+            is TruckItem -> getItemRef("Trucks").child(item.id)
+            else -> throw IllegalArgumentException("Unsupported item type")
+        }
+        ref.setValue(item)
     }
 
-    fun updateCarItem(car: CarItem){
-        deleteCar(car)
-        addCar(car)
+    fun deleteVehicleItem(item: VehicleItem) {
+        if (item.id.isEmpty()) throw IllegalStateException("Item has no ID")
+        val ref = when (item) {
+            is CarItem -> getItemRef("Cars").child(item.id)
+            is TruckItem -> getItemRef("Trucks").child(item.id)
+            else -> throw IllegalArgumentException("Unsupported item type")
+        }
+        ref.removeValue()
     }
 
-    fun updateCarItemUnRent(car: CarItem){
-        deleteCar(car)
-        car.unRent()
-        addCar(car)
-    }
-    fun updateTruckItemUnRent(truck: TruckItem){
-        deleteTruck(truck)
-        truck.unRent()
-        addTruck(truck)
-    }
-
-    fun updateTruckItem(truck: TruckItem){
-        deleteTruck(truck)
-        addTruck(truck)
+    fun addRentalRecord(record: RentalRecord): String {
+        val ref = when (record) {
+            is CarRentalRecord -> getRecordRef("Cars")
+            is TruckRentalRecord -> getRecordRef("Trucks")
+            else -> throw IllegalArgumentException("Unsupported record type")
+        }
+        val id = ref.push().key ?: throw RuntimeException("Failed to generate ID")
+        record.id = id
+        ref.child(id).setValue(record)
+        return id
     }
 
-    fun getCarRecord(callback: (List<CarRecord>?) -> Unit) {
-        val list = mutableListOf<CarRecord>()
-        val ref = firebase.getReference("CarRecords")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (carSnapshot in snapshot.children) {
-                    val car = carSnapshot.getValue(CarRecord::class.java)
-                    if (car != null) {
-                        list.add(car)
-                    }
-
-                }
-                callback(list)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                callback(null)
-            }
-        })
+    fun updateRentalRecord(record: RentalRecord) {
+        if (record.id.isEmpty()) throw IllegalStateException("Record has no ID")
+        val ref = when (record) {
+            is CarRentalRecord -> getRecordRef("Cars").child(record.id)
+            is TruckRentalRecord -> getRecordRef("Trucks").child(record.id)
+            else -> throw IllegalArgumentException("Unsupported record type")
+        }
+        ref.setValue(record)
     }
 
-
-    fun getCarRecordByEmail(email: String, callback: (List<CarRecord>?) -> Unit) {
-        val list = mutableListOf<CarRecord>()
-        val ref = firebase.getReference("CarRecords")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (carSnapshot in snapshot.children) {
-                    val car = carSnapshot.getValue(CarRecord::class.java)
-                    println("car: active = ${car?.isActive}")
-                    if (car != null && car.ownerEmail == email && car.isActive) {
-                        list.add(car)
-                    }
-                }
-                callback(list)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                callback(null)
-            }
-        })
+    fun deleteRentalRecord(record: RentalRecord) {
+        if (record.id.isEmpty()) throw IllegalStateException("Record has no ID")
+        val ref = when (record) {
+            is CarRentalRecord -> getRecordRef("Cars").child(record.id)
+            is TruckRentalRecord -> getRecordRef("Trucks").child(record.id)
+            else -> throw IllegalArgumentException("Unsupported record type")
+        }
+        ref.removeValue()
     }
 
-    fun getTruckRecord(callback: (List<TruckRecord>?) -> Unit){
-        val list = mutableListOf<TruckRecord>()
-        val ref = firebase.getReference("TruckRecords")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (truckSnapshot in snapshot.children) {
-                    val truck = truckSnapshot.getValue(TruckRecord::class.java)
-                    if (truck != null) {
-                        list.add(truck)
-                    }
-                }
-                println(list.size)
-                callback(list)
-
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                callback(null)
-            }
-        })
+    suspend fun getRentalRecords(type: String): List<RentalRecord> {
+        return when (type) {
+            "Cars" -> listenForValue(getRecordRef(type), CarRentalRecord::class.java)
+            "Trucks" -> listenForValue(getRecordRef(type), TruckRentalRecord::class.java)
+            else -> throw IllegalArgumentException("Unsupported type: $type")
+        }
     }
 
-
-    fun getTruckRecordByEmail(email:String, callback: (List<TruckRecord>?) -> Unit){
-        val list = mutableListOf<TruckRecord>()
-        val ref = firebase.getReference("TruckRecords")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (truckSnapshot in snapshot.children) {
-                    val truck = truckSnapshot.getValue(TruckRecord::class.java)
-                    if (truck != null && truck.ownerEmail == email&& truck.isActive) {
-                        list.add(truck)
-                    }
-                    callback(list)
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                callback(null)
-            }
-        })
+    suspend fun getRentalRecordsByUser(user: User, type: String): List<RentalRecord> {
+        val all = getRentalRecords(type)
+        return all.filter { it.renter.email == user.email && it.isActive }
     }
 
-    private fun deleteCarRecord(carRecord: CarRecord) {
-        val ref = firebase.getReference("CarRecords")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (carSnapshot in snapshot.children) {
-                    val temp = carSnapshot.getValue(CarRecord::class.java)
-                    println("temp: $temp, ${temp?.carItem?.car?.brand}, active = ${temp?.isActive}")
-                    println("carRecord: $carRecord, ${carRecord.carItem.car.brand}, active = ${carRecord.isActive}")
-                    if (temp?.carItem?.car ==carRecord.carItem.car&& temp.isActive) {
-                        println("Deleting car record")
-                        val carKey = carSnapshot.key
-                        if (carKey != null) {
-                            println("Deleting car key: $carKey")
-                            ref.child(carKey).removeValue()
-                                .addOnSuccessListener {
-                                    println("Car record $carRecord deleted from the database.")
-                                }
-                                .addOnFailureListener { error ->
-                                    println("Error deleting object: $error")
-                                }
-                        } else {
-                            println("Car key is null")
-                        }
-                        break
-                    }
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                println("Cancel deleting: $error")
-            }
-        })
+    fun addUser(user: User) {
+        val id = usersRef.push().key ?: throw RuntimeException("Failed to generate ID")
+        user.id = id
+        usersRef.child(id).setValue(user)
     }
 
-    private fun deleteTruckRecord(truckRecord: TruckRecord) {
-        val ref = firebase.getReference("TruckRecords")
-        ref.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (truckSnapshot in snapshot.children) {
-                    val temp = truckSnapshot.getValue(TruckRecord::class.java)
-                    println("temp: ${temp?.truckItem?.truck}, ${temp?.truckItem?.truck?.brand}, active = ${temp?.isActive}")
-                    println("carRecord: ${truckRecord.truckItem.truck}, ${truckRecord.truckItem.truck.brand}, active = ${truckRecord.isActive}")
-                    if (temp?.truckItem?.truck?.brand == truckRecord.truckItem.truck.brand&& temp.isActive) {
-                        val truckKey = truckSnapshot.key
-                        if (truckKey != null) {
-                            ref.child(truckKey).removeValue()
-                                .addOnSuccessListener {
-                                    println("Truck record $truckRecord deleted from the database.")
-                                }
-                                .addOnFailureListener { error ->
-                                    println("Error deleting object: $error")
-                                }
-                        } else {
-                            println("Truck key is null")
-                        }
-                        break
-                    }
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                println("Cancel deleting: $error")
-            }
-        })
+    suspend fun getUserByEmail(email: String): User? {
+        val users = listenForValue(usersRef, User::class.java)
+        return users.find { it.email == email }
     }
 
-    fun updateCarRecord(carRecord: CarRecord) {
-        deleteCarRecord(carRecord)
-        carRecord.setPassive()
-        carRecord.carItem.unRent()
-        addCarRecord(carRecord)
+    fun addPayment(payment: Payment): String {
+        val id = paymentsRef.push().key ?: throw RuntimeException("Failed to generate ID")
+        payment.id = id
+        paymentsRef.child(id).setValue(payment)
+        return id
     }
 
-    fun updateCarWithComment(car: CarItem,comment: Comment){
-        deleteCar(car)
-        car.addComment(comment)
-        addCar(car)
+    fun updateItemWithComment(item: VehicleItem, comment: Comment) {
+        item.addComment(comment)
+        updateVehicleItem(item)
     }
 
-    fun updateTruckRecord(truckRecord: TruckRecord){
-        deleteTruckRecord(truckRecord)
-        truckRecord.setPassive()
-        truckRecord.truckItem.unRent()
-        addTruckRecord(truckRecord)
-    }
-
-    fun updateTruckWithComment(truck: TruckItem, comment: Comment){
-        deleteTruck(truck)
-        truck.addComment(comment)
-        addTruck(truck)
+    fun updateRecordToPassive(record: RentalRecord) {
+        record.setPassive()
+        updateRentalRecord(record)
     }
 
 }

@@ -1,80 +1,108 @@
 package com.example.drivetracker.ui.vehicleDetails
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.drivetracker.data.VehicleRepository
 import com.example.drivetracker.data.items.CarItem
 import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.VehicleRepository
-import com.example.drivetracker.data.records.CarRecord
-import com.example.drivetracker.data.records.TruckRecord
+import com.example.drivetracker.data.items.VehicleItem
+import com.example.drivetracker.data.records.CarRentalRecord
+import com.example.drivetracker.data.records.TruckRentalRecord
+import com.example.drivetracker.domain.payment.Payment
+import com.example.drivetracker.domain.rent.RentalRecord
+import com.example.drivetracker.domain.user.User
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
-
 
 class VehicleDetailsViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
     private val auth: FirebaseAuth
-): ViewModel() {
-    private lateinit var displayedCar: CarItem
-    private lateinit var displayedTruck: TruckItem
+) : ViewModel() {
+    private val _displayedItem = MutableStateFlow<VehicleItem?>(null)
+    val displayedItem: StateFlow<VehicleItem?> = _displayedItem
 
-    fun setCar(car: CarItem){
-        displayedCar = car
+    private var currentUser: User? = null
+
+    init {
+        val email = auth.currentUser?.email ?: ""
+        viewModelScope.launch {
+            currentUser = vehicleRepository.getUserByEmail(email) ?: User(
+                email = email,
+                role = if (email == "1@gmail.com") "admin" else "renter"
+            )
+            if (currentUser?.id.isNullOrEmpty()) {
+                val id = vehicleRepository.addUser(currentUser!!)
+                currentUser?.id = id.toString()
+            }
+        }
     }
 
-    fun getDisplayedCar(): CarItem {
-        return displayedCar
+    fun loadVehicleById(id: String) {
+        viewModelScope.launch {
+            val vehicle = vehicleRepository.getVehicleById(id)
+            _displayedItem.value = vehicle
+        }
     }
 
-    fun setTruck(truckItem: TruckItem){
-        displayedTruck = truckItem
+    fun deleteItem() {
+        viewModelScope.launch {
+            _displayedItem.value?.let {
+                vehicleRepository.deleteVehicleItem(it)
+            }
+        }
     }
 
-    fun getDisplayedTruck(): TruckItem {
-        return displayedTruck
+    fun updatePrice(newPrice: Double) {
+        viewModelScope.launch {
+            _displayedItem.value?.let {
+                it.price = newPrice
+                vehicleRepository.updateVehicleItem(it)
+            }
+        }
     }
 
-    fun deleteCar(){
-        vehicleRepository.deleteCar(displayedCar)
+    fun createAndAddRental(endDate: LocalDate): Boolean {
+        val item = _displayedItem.value ?: return false
+        if (!item.isAvailable()) return false
+        val startDate = LocalDate.now()
+        val renter = currentUser ?: return false
+
+        val record = when (item) {
+            is CarItem -> CarRentalRecord(
+                item = item,
+                renter = renter,
+                startRentDate = startDate.toString(),
+                endRentDate = endDate.toString()
+            )
+            is TruckItem -> TruckRentalRecord(
+                item = item,
+                renter = renter,
+                startRentDate = startDate.toString(),
+                endRentDate = endDate.toString()
+            )
+            else -> return false
+        }
+
+        val totalCost = record.calculateTotalCost()
+        val payment = Payment(rental = record, amount = totalCost)
+        if (!payment.processPayment()) return false
+
+        item.setRented(true)
+        vehicleRepository.updateVehicleItem(item)
+
+        val recordId = vehicleRepository.addRentalRecord(record)
+        record.id = recordId
+        vehicleRepository.addPayment(payment)
+
+        renter.addRental(record)
+        return true
     }
 
-    fun deleteTruck(){
-        vehicleRepository.deleteTruck(displayedTruck)
-    }
-
-    fun getUserEmail():String{
-        return auth.currentUser?.email.toString()
-    }
-
-    fun addCarRecord(carRecord: CarRecord){
-        vehicleRepository.addCarRecord(carRecord)
-    }
-
-    fun updateCarItem(){
-        displayedCar.setRent()
-        vehicleRepository.updateCarItem(displayedCar)
-    }
-
-    fun updateCarPrice(price:Double){
-        displayedCar.setCarPrice(price)
-        vehicleRepository.updateCarItem(displayedCar)
-    }
-
-    fun updateTruckPrice(price:Double){
-        displayedTruck.setCarPrice(price)
-        vehicleRepository.updateTruckItem(displayedTruck)
-    }
-
-
-    fun addTruckRecord(truckRecord: TruckRecord){
-        vehicleRepository.addTruckRecord(truckRecord)
-    }
-
-    fun updateTruckItem(){
-        displayedTruck.setRent()
-        vehicleRepository.updateTruckItem(displayedTruck)
-    }
-
-    fun isAdmin():Boolean{
-        return auth.currentUser?.email == "1@gmail.com"
-    }
+    fun isAdmin(): Boolean = currentUser?.role == "admin"
 }

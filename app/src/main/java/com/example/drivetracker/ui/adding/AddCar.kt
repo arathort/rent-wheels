@@ -190,7 +190,7 @@ fun AddCarScreen(
                         price = priceText.text.toDouble(),
                         pledge = pledgeText.text.toDouble()
                     )
-                    viewModel.addCar(carItem)
+                    viewModel.addVehicleItem(carItem)
                     navHostController.navigate(RentWheelsScreen.OrderVehicles.name)
                 }
             }

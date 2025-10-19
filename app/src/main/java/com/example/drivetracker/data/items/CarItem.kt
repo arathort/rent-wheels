@@ -1,13 +1,16 @@
 package com.example.drivetracker.data.items
 
-import com.example.drivetracker.data.comments.Comment
 import com.example.drivetracker.data.entity.Car
+import com.example.drivetracker.domain.rent.Rentable
 
-class CarItem (
+class CarItem(
     val car: Car = Car(),
-    override val uploadDate: String="",
-    override var rented:Boolean = false,
-    override var comments:MutableList<Comment> = mutableListOf(),
-    override var price:Double=0.0,
-    override val pledge: Double = 0.0
-):VehicleItem(uploadDate, rented, comments, price, pledge)
+    override val uploadDate: String = "",
+    override var pledge: Double = 0.0,
+    price: Double = 0.0
+) : VehicleItem(vehicle = car, uploadDate = uploadDate, pledge = pledge, price = price), Rentable {
+
+    fun validateSeats(seatsNeeded: Int): Boolean {
+        return car.numberSeats >= seatsNeeded
+    }
+}

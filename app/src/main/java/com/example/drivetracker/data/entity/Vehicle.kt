@@ -1,8 +1,8 @@
 package com.example.drivetracker.data.entity
 
-abstract class Vehicle(
-    open val brand: String,
-    open val model:String,
-    open val year:Int,
-    open val registrationNumber:String
+open class Vehicle(
+    open val brand: String = "",
+    open val model: String = "",
+    open val year: Int = 0,
+    open val registrationNumber: String = ""
 )

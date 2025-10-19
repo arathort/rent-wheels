@@ -1,87 +1,83 @@
 package com.example.drivetracker.ui.userInfo
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.drivetracker.data.VehicleRepository
 import com.example.drivetracker.data.items.CarItem
 import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.records.CarRecord
-import com.example.drivetracker.data.records.TruckRecord
+import com.example.drivetracker.data.records.CarRentalRecord
+import com.example.drivetracker.data.records.TruckRentalRecord
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
-class UserInfoViewModel@Inject constructor(
+class UserInfoViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
     private val auth: FirebaseAuth
-): ViewModel() {
+) : ViewModel() {
 
-    private var carList = mutableListOf<CarRecord>()
-    private var truckList = mutableListOf<TruckRecord>()
-    fun getUserEmail():String{
-        return auth.currentUser?.email.toString()
+    private val _carRecords = MutableStateFlow<List<CarRentalRecord>>(emptyList())
+    val carRecords: StateFlow<List<CarRentalRecord>> get() = _carRecords
+
+    private val _truckRecords = MutableStateFlow<List<TruckRentalRecord>>(emptyList())
+    val truckRecords: StateFlow<List<TruckRentalRecord>> get() = _truckRecords
+
+    fun getUserEmail(): String {
+        return auth.currentUser?.email ?: ""
     }
 
-    private fun fetchCarRecords(){
-        vehicleRepository.getCarRecordByEmail(auth.currentUser?.email.toString()){
-                cars->
-            cars?.let {
-                carList.clear()
-                carList.addAll(cars)
-            }
+    fun loadCarRecords() {
+        viewModelScope.launch {
+            val userEmail = auth.currentUser?.email ?: return@launch
+            val records = vehicleRepository.getRentalRecordsByUser(
+                user = com.example.drivetracker.domain.user.User(email = userEmail),
+                type = "Cars"
+            ).filterIsInstance<CarRentalRecord>()
+            _carRecords.value = records
         }
     }
 
-    private fun fetchTruckRecords(){
-        vehicleRepository.getTruckRecordByEmail(auth.currentUser?.email.toString()){
-                trucks->
-            trucks?.let {
-                truckList.clear()
-                truckList.addAll(trucks)
-            }
+    fun loadTruckRecords() {
+        viewModelScope.launch {
+            val userEmail = auth.currentUser?.email ?: return@launch
+            val records = vehicleRepository.getRentalRecordsByUser(
+                user = com.example.drivetracker.domain.user.User(email = userEmail),
+                type = "Trucks"
+            ).filterIsInstance<TruckRentalRecord>()
+            _truckRecords.value = records
         }
     }
-    fun getCarRecords(): List<CarRecord>{
-        fetchCarRecords()
-        return carList
+
+    fun updateCar(car: CarItem) {
+        vehicleRepository.updateVehicleItem(car)
     }
 
-    fun updateCar(car:CarItem){
-        vehicleRepository.updateCarItemUnRent(car)
+    fun updateTruck(truckItem: TruckItem) {
+        vehicleRepository.updateVehicleItem(truckItem)
     }
 
-    fun updateTruck(truckItem: TruckItem){
-        vehicleRepository.updateTruckItemUnRent(truckItem)
+    fun updateCarRecord(carRecord: CarRentalRecord) {
+        vehicleRepository.updateRentalRecord(carRecord)
     }
 
-    fun getTruckRecords():List<TruckRecord>{
-        fetchTruckRecords()
-        return truckList
+    fun updateTruckRecord(truckRecord: TruckRentalRecord) {
+        vehicleRepository.updateRentalRecord(truckRecord)
     }
 
-    fun updateCarRecord(carRecord: CarRecord){
-        vehicleRepository.updateCarRecord(carRecord)
-    }
-
-    fun updateTruckRecord(truckRecord: TruckRecord){
-        vehicleRepository.updateTruckRecord(truckRecord)
-    }
-
-    fun isAdmin():Boolean{
+    fun isAdmin(): Boolean {
         return auth.currentUser?.email == "1@gmail.com"
     }
 
-    fun isCarDateEnd(carRecord: CarRecord):Boolean{
+    fun isDateExpired(endRentDate: String): Boolean {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        return LocalDate.now().isAfter(LocalDate.parse(carRecord.endRentDate, formatter))
+        return LocalDate.now().isAfter(LocalDate.parse(endRentDate, formatter))
     }
 
-    fun isTruckDateEnd(truckRecord: TruckRecord):Boolean{
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        return LocalDate.now().isAfter(LocalDate.parse(truckRecord.endRentDate, formatter))
-    }
-
-    fun exit(){
+    fun exit() {
         auth.signOut()
     }
 }
