@@ -2,11 +2,11 @@ package com.example.drivetracker.ui.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.drivetracker.data.VehicleRepository
-import com.example.drivetracker.data.items.CarItem
-import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.records.CarRentalRecord
-import com.example.drivetracker.data.records.TruckRentalRecord
+import com.arathort.data.VehicleRepository
+import com.arathort.data.items.CarItem
+import com.arathort.data.items.TruckItem
+import com.arathort.data.records.CarRentalRecord
+import com.arathort.data.records.TruckRentalRecord
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

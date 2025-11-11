@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.drivetracker.data.items.CarItem
-import com.example.drivetracker.data.items.TruckItem
+import com.arathort.data.items.CarItem
+import com.arathort.data.items.TruckItem
 import com.example.drivetracker.ui.RentWheelsScreen
 import com.example.drivetracker.ui.order.CustomBottomAppBar
 

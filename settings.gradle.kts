@@ -15,4 +15,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "DriveTracker"
 include(":app")
- 
+include(":core")
+include(":data")
+include(":common")

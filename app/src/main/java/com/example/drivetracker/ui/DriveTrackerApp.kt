@@ -10,7 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.drivetracker.data.VehicleRepository
+import com.arathort.data.VehicleRepository
 import com.example.drivetracker.ui.adding.AddCarScreen
 import com.example.drivetracker.ui.adding.AddTruckScreen
 import com.example.drivetracker.ui.auth.LogInScreen

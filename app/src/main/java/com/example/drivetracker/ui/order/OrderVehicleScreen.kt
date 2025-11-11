@@ -38,7 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.drivetracker.data.items.VehicleItem
+import com.arathort.data.items.VehicleItem
 import com.example.drivetracker.ui.RentWheelsScreen
 
 @Composable

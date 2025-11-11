@@ -29,8 +29,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.drivetracker.data.entity.Truck
-import com.example.drivetracker.data.items.TruckItem
+import com.arathort.core.entity.Truck
+import com.arathort.data.items.TruckItem
 import com.example.drivetracker.ui.RentWheelsScreen
 import com.example.drivetracker.ui.order.OrderVehicleViewModel
 import java.time.LocalDate

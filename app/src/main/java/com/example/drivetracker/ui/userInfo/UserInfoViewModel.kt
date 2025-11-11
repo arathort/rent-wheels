@@ -2,11 +2,12 @@ package com.example.drivetracker.ui.userInfo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.drivetracker.data.VehicleRepository
-import com.example.drivetracker.data.items.CarItem
-import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.records.CarRentalRecord
-import com.example.drivetracker.data.records.TruckRentalRecord
+import com.arathort.data.user.User
+import com.arathort.data.VehicleRepository
+import com.arathort.data.items.CarItem
+import com.arathort.data.items.TruckItem
+import com.arathort.data.records.CarRentalRecord
+import com.arathort.data.records.TruckRentalRecord
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,7 @@ class UserInfoViewModel @Inject constructor(
         viewModelScope.launch {
             val userEmail = auth.currentUser?.email ?: return@launch
             val records = vehicleRepository.getRentalRecordsByUser(
-                user = com.example.drivetracker.domain.user.User(email = userEmail),
+                user = User(email = userEmail),
                 type = "Cars"
             ).filterIsInstance<CarRentalRecord>()
             _carRecords.value = records
@@ -45,7 +46,7 @@ class UserInfoViewModel @Inject constructor(
         viewModelScope.launch {
             val userEmail = auth.currentUser?.email ?: return@launch
             val records = vehicleRepository.getRentalRecordsByUser(
-                user = com.example.drivetracker.domain.user.User(email = userEmail),
+                user = User(email = userEmail),
                 type = "Trucks"
             ).filterIsInstance<TruckRentalRecord>()
             _truckRecords.value = records

@@ -1,23 +1,20 @@
 package com.example.drivetracker.ui.vehicleDetails
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.drivetracker.data.VehicleRepository
-import com.example.drivetracker.data.items.CarItem
-import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.items.VehicleItem
-import com.example.drivetracker.data.records.CarRentalRecord
-import com.example.drivetracker.data.records.TruckRentalRecord
-import com.example.drivetracker.domain.payment.Payment
-import com.example.drivetracker.domain.rent.RentalRecord
-import com.example.drivetracker.domain.user.User
+import com.arathort.data.VehicleRepository
+import com.arathort.data.items.CarItem
+import com.arathort.data.items.TruckItem
+import com.arathort.data.items.VehicleItem
+import com.arathort.data.records.CarRentalRecord
+import com.arathort.data.records.TruckRentalRecord
+import com.arathort.data.Payment
+import com.arathort.data.user.User
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 class VehicleDetailsViewModel @Inject constructor(

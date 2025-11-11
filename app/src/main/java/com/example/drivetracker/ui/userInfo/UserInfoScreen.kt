@@ -33,10 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.drivetracker.R
-import com.example.drivetracker.data.items.CarItem
-import com.example.drivetracker.data.items.TruckItem
-import com.example.drivetracker.data.records.CarRentalRecord
-import com.example.drivetracker.data.records.TruckRentalRecord
+import com.arathort.data.items.CarItem
+import com.arathort.data.items.TruckItem
+import com.arathort.data.records.CarRentalRecord
+import com.arathort.data.records.TruckRentalRecord
 import com.example.drivetracker.ui.RentWheelsScreen
 import com.example.drivetracker.ui.order.CustomBottomAppBar
 

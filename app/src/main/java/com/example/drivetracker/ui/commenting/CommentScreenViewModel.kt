@@ -1,10 +1,10 @@
 package com.example.drivetracker.ui.commenting
 
 import androidx.lifecycle.ViewModel
-import com.example.drivetracker.data.VehicleRepository
-import com.example.drivetracker.data.comments.Comment
-import com.example.drivetracker.data.items.CarItem
-import com.example.drivetracker.data.items.TruckItem
+import com.arathort.data.VehicleRepository
+import com.arathort.common.comments.Comment
+import com.arathort.data.items.CarItem
+import com.arathort.data.items.TruckItem
 import com.google.firebase.auth.FirebaseAuth
 import javax.inject.Inject
 import kotlin.properties.Delegates
