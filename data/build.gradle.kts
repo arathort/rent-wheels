@@ -23,7 +23,7 @@ android {
 }
 
 dependencies {
-    implementation("com.arathort:core:1.0.0")
+    implementation(project(":core"))
     implementation(project(":common"))
 
     implementation("com.google.firebase:firebase-auth-ktx:22.3.0")

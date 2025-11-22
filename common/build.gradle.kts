@@ -12,5 +12,5 @@ kotlin {
     }
 }
 dependencies {
-    implementation("com.arathort:core:1.0.0")
+    implementation(project(":core"))
 }

@@ -2,19 +2,23 @@ package com.example.drivetracker.ui.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arathort.data.VehicleRepository
 import com.arathort.data.items.CarItem
 import com.arathort.data.items.TruckItem
 import com.arathort.data.records.CarRentalRecord
 import com.arathort.data.records.TruckRentalRecord
+import com.arathort.data.repositories.RentalRepository
+import com.arathort.data.repositories.VehicleRepository
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@HiltViewModel
 class StatisticScreenViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
+    private val rentalRepository: RentalRepository,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -25,10 +29,8 @@ class StatisticScreenViewModel @Inject constructor(
     val trucks: StateFlow<List<TruckItem>> = _trucks
 
     private val _carRecords = MutableStateFlow<List<CarRentalRecord>>(emptyList())
-    val carRecords: StateFlow<List<CarRentalRecord>> = _carRecords
 
     private val _truckRecords = MutableStateFlow<List<TruckRentalRecord>>(emptyList())
-    val truckRecords: StateFlow<List<TruckRentalRecord>> = _truckRecords
 
     init {
         loadCars()
@@ -55,7 +57,7 @@ class StatisticScreenViewModel @Inject constructor(
 
     private fun loadCarRecords() {
         viewModelScope.launch {
-            val records = vehicleRepository.getRentalRecords("Cars")
+            val records = rentalRepository.getRentals("Cars")
                 .filterIsInstance<CarRentalRecord>()
             _carRecords.value = records
         }
@@ -63,7 +65,7 @@ class StatisticScreenViewModel @Inject constructor(
 
     private fun loadTruckRecords() {
         viewModelScope.launch {
-            val records = vehicleRepository.getRentalRecords("Trucks")
+            val records = rentalRepository.getRentals("Trucks")
                 .filterIsInstance<TruckRentalRecord>()
             _truckRecords.value = records
         }

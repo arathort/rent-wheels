@@ -10,7 +10,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.arathort.data.VehicleRepository
+import com.arathort.data.FirebaseDataSource
+import com.arathort.data.repositories.PaymentRepository
+import com.arathort.data.repositories.RentalRepository
+import com.arathort.data.repositories.UserRepository
+import com.arathort.data.repositories.VehicleRepository
 import com.example.drivetracker.ui.adding.AddCarScreen
 import com.example.drivetracker.ui.adding.AddTruckScreen
 import com.example.drivetracker.ui.auth.LogInScreen
@@ -18,11 +22,8 @@ import com.example.drivetracker.ui.auth.SignInScreen
 import com.example.drivetracker.ui.commenting.CommentScreen
 import com.example.drivetracker.ui.commenting.CommentScreenViewModel
 import com.example.drivetracker.ui.order.OrderVehicleScreen
-import com.example.drivetracker.ui.order.OrderVehicleViewModel
 import com.example.drivetracker.ui.statistics.StatisticScreen
-import com.example.drivetracker.ui.statistics.StatisticScreenViewModel
 import com.example.drivetracker.ui.userInfo.UserInfoScreen
-import com.example.drivetracker.ui.userInfo.UserInfoViewModel
 import com.example.drivetracker.ui.vehicleDetails.VehicleDetailsScreen
 import com.example.drivetracker.ui.vehicleDetails.VehicleDetailsViewModel
 import com.google.firebase.Firebase
@@ -39,12 +40,13 @@ fun DriveTrackerApp(
         ?: RentWheelsScreen.LogIn
 
     Firebase.initialize(context = LocalContext.current)
-    val rep = VehicleRepository()
+    val rep = VehicleRepository(FirebaseDataSource())
+    val rentalRepository = RentalRepository(FirebaseDataSource())
+    val userRepository = UserRepository(FirebaseDataSource())
+    val paymentRepository = PaymentRepository(FirebaseDataSource())
     val auth = remember { Firebase.auth }
 
-    val userInfoViewModel = remember { UserInfoViewModel(rep, auth) }
     val commentScreenViewModel = remember { CommentScreenViewModel(auth, rep) }
-    val statisticScreenViewModel = remember { StatisticScreenViewModel(rep, auth) }
 
     NavHost(
         navController = navHostController,
@@ -66,15 +68,23 @@ fun DriveTrackerApp(
         }
 
         composable(RentWheelsScreen.OrderVehicles.name) {
-            val orderViewModel = remember { OrderVehicleViewModel(rep, auth) }
-            OrderVehicleScreen(navHostController, orderViewModel)
+            OrderVehicleScreen(navHostController)
         }
 
         composable(
             route = "${RentWheelsScreen.VehicleDetails.name}/{vehicleId}"
         ) { backStackEntry ->
             val vehicleId = backStackEntry.arguments?.getString("vehicleId") ?: return@composable
-            val detailsViewModel = remember { VehicleDetailsViewModel(rep, auth) }
+            val detailsViewModel =
+                remember {
+                    VehicleDetailsViewModel(
+                        rep,
+                        userRepository = userRepository,
+                        auth = auth,
+                        rentalRepository = rentalRepository,
+                        paymentRepository = paymentRepository
+                    )
+                }
             Log.e("My", "id:$vehicleId")
             detailsViewModel.loadVehicleById(vehicleId)
 
@@ -89,25 +99,16 @@ fun DriveTrackerApp(
         }
 
         composable(RentWheelsScreen.AddCar.name) {
-            AddCarScreen(remember {
-                OrderVehicleViewModel(
-                    rep,
-                    auth
-                )
-            }, navHostController)
+            AddCarScreen(
+                navHostController = navHostController
+            )
         }
         composable(RentWheelsScreen.AddTruck.name) {
-            AddTruckScreen(remember {
-                OrderVehicleViewModel(
-                    rep,
-                    auth
-                )
-            }, navHostController)
+            AddTruckScreen(navHostController = navHostController)
         }
         composable(RentWheelsScreen.MyVehicles.name) {
             UserInfoScreen(
                 navHostController = navHostController,
-                viewModel = userInfoViewModel,
                 onCarClick = {
                     commentScreenViewModel.setCar(it)
                     navHostController.navigate(RentWheelsScreen.CommentScreen.name)
@@ -119,11 +120,10 @@ fun DriveTrackerApp(
             )
         }
         composable(RentWheelsScreen.CommentScreen.name) {
-            CommentScreen(viewModel = commentScreenViewModel, navHostController = navHostController)
+            CommentScreen(navHostController = navHostController)
         }
         composable(RentWheelsScreen.StatsScreen.name) {
             StatisticScreen(
-                viewModel = statisticScreenViewModel,
                 navHostController = navHostController
             )
         }

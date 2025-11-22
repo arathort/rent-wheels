@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.arathort.data.items.CarItem
 import com.arathort.core.entity.Car
@@ -37,7 +38,7 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun AddCarScreen(
-    viewModel: OrderVehicleViewModel,
+    viewModel: OrderVehicleViewModel=hiltViewModel(),
     navHostController: NavHostController
 ){
     val context = LocalContext.current

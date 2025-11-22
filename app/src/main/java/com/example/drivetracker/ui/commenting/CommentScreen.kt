@@ -21,13 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.arathort.common.comments.Comment
 import com.example.drivetracker.ui.RentWheelsScreen
 
 @Composable
 fun CommentScreen(
-    viewModel: CommentScreenViewModel,
+    viewModel: CommentScreenViewModel = hiltViewModel(),
     navHostController: NavHostController
 ){
     Surface(

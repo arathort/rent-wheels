@@ -2,14 +2,16 @@ package com.example.drivetracker.ui.order
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arathort.data.VehicleRepository
 import com.arathort.data.items.CarItem
 import com.arathort.data.items.TruckItem
 import com.arathort.data.items.VehicleItem
+import com.arathort.data.repositories.UserRepository
+import com.arathort.data.repositories.VehicleRepository
 import com.arathort.data.user.User
 import com.example.drivetracker.ui.OrderVehicleUiState
 import com.example.drivetracker.ui.RentWheelsScreen
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,8 +19,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@HiltViewModel
 class OrderVehicleViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
+    private val userRepository: UserRepository,
     private val auth: FirebaseAuth
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(OrderVehicleUiState())
@@ -29,12 +33,12 @@ class OrderVehicleViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val email = auth.currentUser?.email ?: ""
-            currentUser = vehicleRepository.getUserByEmail(email) ?: User(
+            currentUser = userRepository.getUserByEmail(email) ?: User(
                 email = email,
                 role = if (email == "1@gmail.com") "admin" else "renter"
             )
             if (currentUser?.id.isNullOrEmpty()) {
-                val id = vehicleRepository.addUser(currentUser!!)
+                val id = userRepository.addUser(currentUser!!)
                 currentUser?.id = id.toString()
             }
             fetchVehicles()
@@ -88,6 +92,6 @@ class OrderVehicleViewModel @Inject constructor(
     }
 
     fun addVehicleItem(vehicleItem: VehicleItem) {
-        vehicleRepository.addVehicleItem(vehicleItem)
+        vehicleRepository.addVehicle(vehicleItem)
     }
 }

@@ -3,12 +3,14 @@ package com.example.drivetracker.ui.userInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.arathort.data.user.User
-import com.arathort.data.VehicleRepository
 import com.arathort.data.items.CarItem
 import com.arathort.data.items.TruckItem
 import com.arathort.data.records.CarRentalRecord
 import com.arathort.data.records.TruckRentalRecord
+import com.arathort.data.repositories.RentalRepository
+import com.arathort.data.repositories.VehicleRepository
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -16,8 +18,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
+@HiltViewModel
 class UserInfoViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
+    private val rentalRepository: RentalRepository,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -34,7 +38,7 @@ class UserInfoViewModel @Inject constructor(
     fun loadCarRecords() {
         viewModelScope.launch {
             val userEmail = auth.currentUser?.email ?: return@launch
-            val records = vehicleRepository.getRentalRecordsByUser(
+            val records = rentalRepository.getRentalsByUser(
                 user = User(email = userEmail),
                 type = "Cars"
             ).filterIsInstance<CarRentalRecord>()
@@ -45,7 +49,7 @@ class UserInfoViewModel @Inject constructor(
     fun loadTruckRecords() {
         viewModelScope.launch {
             val userEmail = auth.currentUser?.email ?: return@launch
-            val records = vehicleRepository.getRentalRecordsByUser(
+            val records = rentalRepository.getRentalsByUser(
                 user = User(email = userEmail),
                 type = "Trucks"
             ).filterIsInstance<TruckRentalRecord>()
@@ -54,19 +58,19 @@ class UserInfoViewModel @Inject constructor(
     }
 
     fun updateCar(car: CarItem) {
-        vehicleRepository.updateVehicleItem(car)
+        vehicleRepository.updateVehicle(car)
     }
 
     fun updateTruck(truckItem: TruckItem) {
-        vehicleRepository.updateVehicleItem(truckItem)
+        vehicleRepository.updateVehicle(truckItem)
     }
 
     fun updateCarRecord(carRecord: CarRentalRecord) {
-        vehicleRepository.updateRentalRecord(carRecord)
+        rentalRepository.updateRentalRecord(carRecord)
     }
 
     fun updateTruckRecord(truckRecord: TruckRentalRecord) {
-        vehicleRepository.updateRentalRecord(truckRecord)
+        rentalRepository.updateRentalRecord(truckRecord)
     }
 
     fun isAdmin(): Boolean {

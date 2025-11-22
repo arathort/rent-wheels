@@ -31,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.drivetracker.R
 import com.arathort.data.items.CarItem
@@ -43,7 +44,7 @@ import com.example.drivetracker.ui.order.CustomBottomAppBar
 @Composable
 fun UserInfoScreen(
     navHostController: NavHostController,
-    viewModel: UserInfoViewModel,
+    viewModel: UserInfoViewModel = hiltViewModel(),
     onCarClick: (CarItem) -> Unit,
     onTruckClick: (TruckItem) -> Unit
 ) {

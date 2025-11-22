@@ -2,24 +2,32 @@ package com.example.drivetracker.ui.vehicleDetails
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arathort.data.VehicleRepository
 import com.arathort.data.items.CarItem
 import com.arathort.data.items.TruckItem
 import com.arathort.data.items.VehicleItem
 import com.arathort.data.records.CarRentalRecord
 import com.arathort.data.records.TruckRentalRecord
 import com.arathort.data.Payment
+import com.arathort.data.repositories.PaymentRepository
+import com.arathort.data.repositories.RentalRepository
+import com.arathort.data.repositories.UserRepository
+import com.arathort.data.repositories.VehicleRepository
 import com.arathort.data.user.User
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
+@HiltViewModel
 class VehicleDetailsViewModel @Inject constructor(
     private val vehicleRepository: VehicleRepository,
-    private val auth: FirebaseAuth
+    private val userRepository: UserRepository,
+    private val rentalRepository: RentalRepository,
+    private val paymentRepository: PaymentRepository,
+    auth: FirebaseAuth
 ) : ViewModel() {
     private val _displayedItem = MutableStateFlow<VehicleItem?>(null)
     val displayedItem: StateFlow<VehicleItem?> = _displayedItem
@@ -29,13 +37,13 @@ class VehicleDetailsViewModel @Inject constructor(
     init {
         val email = auth.currentUser?.email ?: ""
         viewModelScope.launch {
-            currentUser = vehicleRepository.getUserByEmail(email) ?: User(
+            currentUser = userRepository.getUserByEmail(email) ?: User(
                 email = email,
                 role = if (email == "1@gmail.com") "admin" else "renter"
             )
             if (currentUser?.id.isNullOrEmpty()) {
-                val id = vehicleRepository.addUser(currentUser!!)
-                currentUser?.id = id.toString()
+                val id = userRepository.addUser(currentUser!!)
+                currentUser?.id = id
             }
         }
     }
@@ -50,7 +58,7 @@ class VehicleDetailsViewModel @Inject constructor(
     fun deleteItem() {
         viewModelScope.launch {
             _displayedItem.value?.let {
-                vehicleRepository.deleteVehicleItem(it)
+                vehicleRepository.deleteVehicle(it)
             }
         }
     }
@@ -59,7 +67,7 @@ class VehicleDetailsViewModel @Inject constructor(
         viewModelScope.launch {
             _displayedItem.value?.let {
                 it.price = newPrice
-                vehicleRepository.updateVehicleItem(it)
+                vehicleRepository.updateVehicle(it)
             }
         }
     }
@@ -91,11 +99,11 @@ class VehicleDetailsViewModel @Inject constructor(
         if (!payment.processPayment()) return false
 
         item.setRented(true)
-        vehicleRepository.updateVehicleItem(item)
+        vehicleRepository.updateVehicle(item)
 
-        val recordId = vehicleRepository.addRentalRecord(record)
+        val recordId = rentalRepository.addRental(record)
         record.id = recordId
-        vehicleRepository.addPayment(payment)
+        paymentRepository.addPayment(payment)
 
         renter.addRental(record)
         return true

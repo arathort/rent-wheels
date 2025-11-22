@@ -1,9 +1,11 @@
 plugins {
     id("com.android.application")
-    id("com.google.devtools.ksp") version "1.9.0-1.0.13"
+    id("com.google.devtools.ksp")
     id("org.jetbrains.kotlin.android")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
+    id("com.google.dagger.hilt.android")
+
 }
 
 android {
@@ -53,7 +55,7 @@ android {
 }
 
 dependencies {
-    implementation("com.arathort:core:1.0.0")
+    implementation(project(":core"))
     implementation(project(":data"))
     implementation(project(":common"))
 
@@ -79,6 +81,9 @@ dependencies {
     implementation ("com.google.firebase:firebase-appcheck:17.1.2")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
 
+    implementation("com.google.dagger:hilt-android:2.48")
+    ksp("com.google.dagger:hilt-compiler:2.48")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     ksp("androidx.room:room-compiler:2.6.1")
 

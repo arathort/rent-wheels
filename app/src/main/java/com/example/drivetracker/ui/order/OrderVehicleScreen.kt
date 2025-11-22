@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.arathort.data.items.VehicleItem
 import com.example.drivetracker.ui.RentWheelsScreen
@@ -44,7 +45,7 @@ import com.example.drivetracker.ui.RentWheelsScreen
 @Composable
 fun OrderVehicleScreen(
     navHostController: NavHostController,
-    viewModel: OrderVehicleViewModel
+    viewModel: OrderVehicleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     Surface(modifier = Modifier.fillMaxSize()) {
